@@ -1,0 +1,127 @@
+
+<style>
+#erd svg { max-width: 100%; }
+#erd svg .node rect { rx: 8; }
+</style>
+<div id="erd" style="padding: 0.5rem 0"></div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"Anthropic Sans", sans-serif',
+  themeVariables: {
+    darkMode: dark,
+    fontSize: '12px',
+    fontFamily: '"Anthropic Sans", sans-serif',
+    lineColor: dark ? '#9c9a92' : '#73726c',
+    textColor: dark ? '#c2c0b6' : '#3d3d3a',
+    primaryColor: dark ? '#1e2a3a' : '#e6f1fb',
+    primaryBorderColor: dark ? '#185fa5' : '#378add',
+    primaryTextColor: dark ? '#b5d4f4' : '#0c447c',
+    edgeLabelBackground: dark ? '#1e1e1c' : '#ffffff',
+    attributeBackgroundColorOdd: dark ? '#1a1a18' : '#f8f8f7',
+    attributeBackgroundColorEven: dark ? '#141412' : '#ffffff',
+  },
+});
+const { svg } = await mermaid.render('erd-svg', `erDiagram
+  customers {
+    int customer_id PK
+    string first_name
+    string last_name
+    string loyalty_tier
+    string acquisition_channel
+    int preferred_store_id FK
+  }
+  stores {
+    int store_id PK
+    string store_name
+    string store_type
+    float size_sqm
+  }
+  products {
+    int product_id PK
+    string product_name
+    string category
+    float unit_price
+    string brand_line
+  }
+  transactions {
+    int transaction_id PK
+    int customer_id FK
+    int store_id FK
+    int campaign_id FK
+    date transaction_date
+    float total_amount
+    string channel
+  }
+  transaction_items {
+    int item_id PK
+    int transaction_id FK
+    int product_id FK
+    int quantity
+    float line_total
+  }
+  returns {
+    int return_id PK
+    int transaction_id FK
+    int customer_id FK
+    int product_id FK
+    date return_date
+    float refund_amount
+    string return_reason
+  }
+  campaigns {
+    int campaign_id PK
+    string campaign_name
+    string campaign_type
+    float budget
+    string objective
+  }
+  campaign_responses {
+    int response_id PK
+    int campaign_id FK
+    int customer_id FK
+    bool opened
+    bool clicked
+    bool converted
+    float revenue_attributed
+  }
+  customers ||--o{ transactions : "realiza"
+  customers ||--o{ campaign_responses : "recibe"
+  customers ||--o{ returns : "devuelve"
+  stores ||--o{ transactions : "registra"
+  transactions ||--|{ transaction_items : "contiene"
+  transactions ||--o{ returns : "origina"
+  products ||--o{ transaction_items : "incluido en"
+  products ||--o{ returns : "devuelto en"
+  campaigns ||--o{ transactions : "atribuida a"
+  campaigns ||--o{ campaign_responses : "genera"
+`);
+document.getElementById('erd').innerHTML = svg;
+
+document.querySelectorAll('#erd svg .node').forEach(node => {
+  const firstPath = node.querySelector('path[d]');
+  if (!firstPath) return;
+  const d = firstPath.getAttribute('d');
+  const nums = d.match(/-?[\d.]+/g)?.map(Number);
+  if (!nums || nums.length < 8) return;
+  const xs = [nums[0], nums[2], nums[4], nums[6]];
+  const ys = [nums[1], nums[3], nums[5], nums[7]];
+  const x = Math.min(...xs), y = Math.min(...ys);
+  const w = Math.max(...xs) - x, h = Math.max(...ys) - y;
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('x', x); rect.setAttribute('y', y);
+  rect.setAttribute('width', w); rect.setAttribute('height', h);
+  rect.setAttribute('rx', '8');
+  for (const a of ['fill', 'stroke', 'stroke-width', 'class', 'style']) {
+    if (firstPath.hasAttribute(a)) rect.setAttribute(a, firstPath.getAttribute(a));
+  }
+  firstPath.replaceWith(rect);
+});
+document.querySelectorAll('#erd svg .row-rect-odd path, #erd svg .row-rect-even path').forEach(p => {
+  p.setAttribute('stroke', 'none');
+});
+</script>
